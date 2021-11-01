@@ -1,0 +1,4 @@
+<section class="phx-hero">
+  <h1>Starting practicing</h1>
+    <test-component></test-component>
+</section>

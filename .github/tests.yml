@@ -1,0 +1,56 @@
+name: Unit Tests
+
+on:
+  push:
+    branches-ignore:
+      - master
+      - staging
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    name: OTP ${{ matrix.otp }} | Elixir ${{ matrix.elixir }} | Node ${{ matrix.node }} | OS ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+        otp: ["23.2"]
+        elixir: ["1.11.3"]
+        node: [12.x]
+
+    services:
+      db:
+        image: postgres:9.6
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: orca_test
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: webfactory/ssh-agent@v0.5.1
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - uses: erlef/setup-elixir@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+      - uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+          yarn --cwd assets install
+      - name: Run tests
+        run: |
+          mix compile
+          mix format --check-formatted
+          mix credo
+          mix test
