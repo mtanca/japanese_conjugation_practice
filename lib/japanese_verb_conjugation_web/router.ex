@@ -16,7 +16,7 @@ defmodule JapaneseVerbConjugationWeb.Router do
   scope "/", JapaneseVerbConjugationWeb do
     pipe_through :browser
 
-    get "/", PageController, :index
+    get "/*path", PageController, :index
   end
 
   scope "/search", JapaneseVerbConjugationWeb do

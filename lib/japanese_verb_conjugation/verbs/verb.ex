@@ -10,11 +10,15 @@ defmodule JapaneseVerbConjugation.Verbs.Verb do
            only: [
              :id,
              :class,
-             :plain_base
+             :plain_base,
+             :romaji,
+             :meaning
            ]}
   schema "verbs" do
     field :class, :string
     field :plain_base, :string
+    field :romaji, :string
+    field :meaning, :string
 
     timestamps()
   end
@@ -22,7 +26,8 @@ defmodule JapaneseVerbConjugation.Verbs.Verb do
   @doc false
   def changeset(verb, attrs) do
     verb
-    |> cast(attrs, [:plain_base, :class])
-    |> validate_required([:plain_base, :class])
+    |> cast(attrs, [:plain_base, :class, :romaji, :meaning])
+    |> validate_required([:plain_base, :class, :romaji, :meaning])
+    |> unique_constraint(:plain_base)
   end
 end

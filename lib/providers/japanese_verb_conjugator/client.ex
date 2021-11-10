@@ -3,6 +3,8 @@ defmodule Services.JapaneseVerbConjugator.Client do
   A simple client to get verb data from www.japaneseverbconjugator.com
   """
 
+  alias JapaneseVerbConjugation.Verbs
+
   @base_url "http://www.japaneseverbconjugator.com/"
 
   @type hirigana_verb :: String.t()
@@ -28,12 +30,42 @@ defmodule Services.JapaneseVerbConjugator.Client do
           optional(:additional_details) => map()
         }
 
+  require IEx
+
   @spec get(hirigana_verb()) :: {:ok, verb_details()} | {:error, client_error()}
   def get(verb) do
     verb
-    |> build_url()
+    |> build_url(:get)
     |> HTTPoison.get()
     |> handle_response()
+  end
+
+  def all() do
+    endpoint = "JVerbList.asp"
+
+    with url <- build_url(endpoint, :all),
+         {:ok, response_data} <- HTTPoison.get(url) do
+      {:ok, document} = Floki.parse_document(response_data.body)
+
+      document
+      |> Floki.find("td")
+      |> Enum.split(7)
+      |> elem(1)
+      |> Enum.chunk_every(6)
+      |> Enum.map(fn data ->
+        plain_base = fn ->
+          first_check = Floki.find(data, "div.JScript") |> Floki.text()
+          if first_check == "", do: Floki.find(data, "span") |> Floki.text(), else: first_check
+        end
+
+        Verbs.create_verb(%{
+          "romaji" => Enum.at(data, 0) |> Floki.text(),
+          "plain_base" => plain_base.(),
+          "class" => Enum.at(data, 3) |> Floki.text() |> verb_class(),
+          "meaning" => Enum.at(data, 2) |> Floki.text()
+        })
+      end)
+    end
   end
 
   @spec handle_response({:ok, HTTPoison.Response.t()} | {:error, HTTPoison.Error.t()}) ::
@@ -154,14 +186,6 @@ defmodule Services.JapaneseVerbConjugator.Client do
   end
 
   defp process_metadata_elements(html_element) do
-    verb_class = fn text_value ->
-      cond do
-        String.contains?(text_value, "Godan") -> "Godan"
-        String.contains?(text_value, "Ichidan") -> "Ichidan"
-        true -> "Irregular"
-      end
-    end
-
     format = fn text_value ->
       String.split(text_value) |> Enum.join(" ")
     end
@@ -172,7 +196,7 @@ defmodule Services.JapaneseVerbConjugator.Client do
 
     text =
       case header do
-        "Verb Class" -> verb_class.(text_value)
+        "Verb Class" -> verb_class(text_value)
         "Stem" -> format.(text_value)
         "Infinitive" -> format.(text_value)
         "Te form" -> format.(text_value)
@@ -201,8 +225,22 @@ defmodule Services.JapaneseVerbConjugator.Client do
   @doc """
   Builds the request url given the verb being searched
   """
-  @spec build_url(hirigana_verb()) :: String.t()
-  def build_url(verb) do
+  @spec build_url(hirigana_verb(), :get | :all) :: String.t()
+  def build_url(verb, :get) do
     @base_url <> "VerbDetails.asp?txtVerb=" <> verb <> "&Go=Conjugate"
+  end
+
+  def build_url(endpoint, :all) do
+    @base_url <> endpoint
+  end
+
+  def verb_class(text_value) do
+    cond do
+      String.contains?(text_value, "Godan") -> "Godan"
+      String.contains?(text_value, "1") -> "Godan"
+      String.contains?(text_value, "Ichidan") -> "Ichidan"
+      String.contains?(text_value, "2") -> "Ichidan"
+      true -> "Irregular"
+    end
   end
 end
