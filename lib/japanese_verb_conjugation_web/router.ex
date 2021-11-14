@@ -2,7 +2,7 @@ defmodule JapaneseVerbConjugationWeb.Router do
   use JapaneseVerbConjugationWeb, :router
 
   pipeline :browser do
-    plug :accepts, ["html"]
+    plug :accepts, ["html", "json"]
     plug :fetch_session
     plug :fetch_flash
     plug :protect_from_forgery
@@ -13,16 +13,26 @@ defmodule JapaneseVerbConjugationWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/", JapaneseVerbConjugationWeb do
-    pipe_through :browser
-
-    get "/*path", PageController, :index
-  end
-
   scope "/search", JapaneseVerbConjugationWeb do
     pipe_through :api
 
     post "/", SearchController, :search
+    get "/all", SearchController, :index
+  end
+
+  scope "/study-sessions", JapaneseVerbConjugationWeb do
+    pipe_through :api
+
+    put "/:session_id", StudySessionControllerController, :update
+    get "/:session_id/details", StudySessionControllerController, :get
+
+    post "/", StudySessionControllerController, :create
+  end
+
+  scope "/", JapaneseVerbConjugationWeb do
+    pipe_through :browser
+
+    get "/*path", PageController, :index
   end
 
   # Other scopes may use custom stacks.

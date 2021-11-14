@@ -9,6 +9,10 @@ defmodule JapaneseVerbConjugationWeb.SearchController do
 
   require Logger
 
+  def index(conn, params) do
+    json(conn, %{"data" => Verbs.list_verbs()})
+  end
+
   def search(conn, %{"hirigana_verb" => hirigana_verb}) do
     render_response = fn info ->
       case info do
@@ -40,7 +44,7 @@ defmodule JapaneseVerbConjugationWeb.SearchController do
       Services.VerbManager.start_link(hirigana_verb)
       {:ok, verb_tenses}
     else
-      error ->
+      _error ->
         case create_verb(hirigana_verb) do
           {:ok, _data} ->
             Services.VerbManager.start_link(hirigana_verb)

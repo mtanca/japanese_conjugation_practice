@@ -8,18 +8,36 @@ Client.all()
 verbs = JapaneseVerbConjugation.Verbs.list_verbs()
 
 Enum.each(verbs, fn verb ->
-  with {:ok, response_data} <- Client.get(verb.plain_base) do
-    Enum.map(response_data.data, fn data ->
-      politness_keys = Map.drop(data, [:tense, :meanings])
+  with {:ok, %{metadata: processed_meta, data: processed_data}} <- Client.get(verb.plain_base) do
+    Enum.map(processed_data, fn data ->
+      politness_keys = Map.drop(data[:data], [:tense, :meanings])
 
       Enum.map(politness_keys, fn {key, value} ->
         {romaji, hirigana} =
           case value do
-            {romaji, hirigana} -> {romaji, hirigana}
-            [{romaji, hirigana}] -> {romaji, hirigana}
-            [{_, _}, {romaji, hirigana}] -> {romaji, hirigana}
-            nil -> {nil, nil}
-            [] -> {nil, nil}
+            [romaji, hirigana] ->
+              {romaji, hirigana}
+
+            [first_romaji, second_romaji, hirigana] ->
+              {first_romaji <> " " <> second_romaji, hirigana}
+
+            [first_romaji, second_romaji, first_kanji, second_kanji] ->
+              {first_romaji <> " " <> second_romaji, first_kanji <> " " <> second_kanji}
+
+            [{romaji, hirigana}] ->
+              {romaji, hirigana}
+
+            [{_, _}, {romaji, hirigana}] ->
+              {romaji, hirigana}
+
+            nil ->
+              {nil, nil}
+
+            [] ->
+              {nil, nil}
+
+            _ ->
+              IO.inspect({nil, nil}, label: to_string(value))
           end
 
         {form, politness} =
@@ -34,11 +52,11 @@ Enum.each(verbs, fn verb ->
           VerbTenses.create_verb_tense(%{
             "base_verb_id" => verb.id,
             "form" => form,
-            "meaning" => data.meanings[form],
+            "meaning" => data[:data].meanings[form],
             "romaji" => romaji,
             "hirigana" => hirigana,
             "politness" => politness,
-            "tense" => data.tense
+            "tense" => data[:data].tense
           })
 
         tense

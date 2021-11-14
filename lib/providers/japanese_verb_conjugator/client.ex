@@ -30,8 +30,6 @@ defmodule Services.JapaneseVerbConjugator.Client do
           optional(:additional_details) => map()
         }
 
-  require IEx
-
   @spec get(hirigana_verb()) :: {:ok, verb_details()} | {:error, client_error()}
   def get(verb) do
     verb
@@ -79,24 +77,16 @@ defmodule Services.JapaneseVerbConjugator.Client do
     {headers, rest} = Enum.split(content, 4)
     # Next 1 rows are for the Positive/Negative meanings
     {_meanings, rest} = Enum.split(rest, 1)
-    # Tenese should be in chunks of 3 <tr>
-    tenses = Enum.chunk_every(rest, 3)
 
-    response_data =
-      Enum.reduce([headers, tenses], %{metadata: %{}, data: []}, fn content_type, acc ->
-        data =
-          Enum.reduce(content_type, %{metadata: %{}, data: []}, fn table_row, acc2 ->
-            handle_parse(table_row, acc2)
-          end)
+    {:ok, processed_data} = process_body(rest)
 
-        %{
-          acc
-          | metadata: Map.merge(acc.metadata, data.metadata),
-            data: acc.data ++ data.data
-        }
+    processed_meta =
+      Enum.reduce(headers, %{}, fn header, acc ->
+        procesed_header = process_metadata_header(header)
+        Map.merge(acc, procesed_header)
       end)
 
-    {:ok, response_data}
+    {:ok, %{metadata: processed_meta, data: processed_data}}
   end
 
   def handle_response({:ok, %HTTPoison.Response{status_code: code, body: body}})
@@ -120,25 +110,64 @@ defmodule Services.JapaneseVerbConjugator.Client do
     {:error, error}
   end
 
+  def process_body(unprocessed_html, acc \\ [])
+
+  def process_body([], acc) do
+    {:ok, Enum.map(acc, &%{data: List.first(&1.data)})}
+  end
+
+  def process_body(unprocessed_html, acc) do
+    next_chunk = Enum.take(unprocessed_html, 3)
+
+    cond do
+      # this chunk of html contains the meaning class,
+      # meaning it should processed indiviually
+      Floki.find(next_chunk, ".Meaning") != [] ->
+        processed_chunk = handle_parse(next_chunk, %{data: []})
+        {_next_chunk, rest} = Enum.split(unprocessed_html, 3)
+        process_body(rest, [processed_chunk | acc])
+
+      true ->
+        # chunk by 2 for this...
+        next_chunk = Enum.take(unprocessed_html, 2)
+        processed_chunk = handle_parse(next_chunk, %{data: []})
+        current_chunk_data = List.first(processed_chunk.data)
+
+        # there is no more data to process!!!!
+        if is_nil(current_chunk_data) do
+          process_body([], acc)
+        else
+          # get the previous meaings and add it to this new chunk
+          last_processed_meanings =
+            acc
+            |> List.first()
+            |> Map.get(:data)
+            |> List.first()
+            |> Map.get(:meanings)
+
+          updated_current_chunk_data =
+            put_in(current_chunk_data.meanings, last_processed_meanings)
+
+          updated_processed_chunk = %{processed_chunk | data: [updated_current_chunk_data]}
+
+          {_next_chunk, rest} = Enum.split(unprocessed_html, 2)
+          process_body(rest, [updated_processed_chunk | acc])
+        end
+    end
+  end
+
   @doc """
   Contains the business logic to determine if the 'row_elements' should be
   processed / added to the metadata or the data/body field of the accumulator
   """
   @spec handle_parse(any(), map()) :: map()
-  def handle_parse(row_elements, %{metadata: metadata, data: acc_data} = acc) do
-    is_metadata? = Floki.find(row_elements, "th.VerbInfoLabel") != []
+  def handle_parse(row_elements, %{data: acc_data} = acc) do
+    updated_data = proccess_tense_data(row_elements)
 
-    if is_metadata? do
-      updated_metadata = Map.merge(metadata, process_metadata_elements(row_elements))
-      %{acc | metadata: updated_metadata}
+    if is_nil(updated_data) do
+      acc
     else
-      updated_data = proccess_tense_data(row_elements)
-
-      if is_nil(updated_data) do
-        acc
-      else
-        %{acc | data: acc_data ++ [updated_data]}
-      end
+      %{acc | data: acc_data ++ [updated_data]}
     end
   end
 
@@ -155,37 +184,67 @@ defmodule Services.JapaneseVerbConjugator.Client do
       Enum.zip(["Positive", "Negative"], meanings) |> Enum.into(%{})
     end
 
-    romaji = Floki.find(row_elements, "span.romaji") |> Enum.map(&clean_text_in_element(&1))
-    hirigana = Floki.find(row_elements, "a") |> Enum.map(&Floki.text(&1))
+    forms =
+      Enum.reduce(row_elements, %{}, fn row_element, acc ->
+        politness = Floki.find(row_element, ".MiddleCell") |> Floki.text() |> String.trim()
+        contains_middlecell_element? = politness == ""
 
-    mappings = Enum.zip(romaji, hirigana)
+        with false <- contains_middlecell_element?,
+             {_, _, data} <- row_element do
+          forms_mapping =
+            row_element
+            |> Floki.find("td")
+            |> Enum.with_index()
+            |> Enum.filter(fn {d, _} -> d == {"td", [], []} end)
+            |> process_td_element(data, politness)
 
-    # Presumptive tenses have 2 different options for positive types...
-    grouped_by =
-      if String.contains?(current_tense, "Presumptive") do
-        {plain_positive, rest} = Enum.split(mappings, 2)
-        {polite_positive, rest} = Enum.split(rest, 2)
-        plain_neg = List.first(rest)
-        polite_neg = List.last(rest)
+          Map.put(acc, politness, forms_mapping)
+        else
+          _ -> acc
+        end
+      end)
 
-        [plain_positive, polite_positive, plain_neg, polite_neg]
-      else
-        Enum.chunk_every(mappings, 1)
-      end
-
-    if current_tense != "" do
+    if forms != %{} do
       %{
         tense: current_tense,
         meanings: get_meanings.(row_elements),
-        plain_positive: Enum.at(grouped_by, 0),
-        polite_positive: Enum.at(grouped_by, 1),
-        plain_negative: Enum.at(grouped_by, 2),
-        polite_negative: Enum.at(grouped_by, 3)
+        plain_positive: forms["Plain"].positive,
+        plain_negative: forms["Plain"].negative,
+        polite_positive: forms["Polite"].positive,
+        polite_negative: forms["Polite"].negative
       }
     end
   end
 
-  defp process_metadata_elements(html_element) do
+  def process_td_element([{{"td", [], []}, 1}, {{"td", [], []}, 2}], _, _) do
+    %{positive: nil, negative: nil}
+  end
+
+  def process_td_element([{{"td", [], []}, 3}], data, _) do
+    positive_value = format_td_element(Enum.at(data, 2))
+    %{positive: positive_value, negative: nil}
+  end
+
+  def process_td_element([], data, politness) do
+    [pos_position, neg_position] =
+      case politness do
+        "Plain" -> [2, 3]
+        "Polite" -> [1, 2]
+      end
+
+    %{
+      positive: format_td_element(Enum.at(data, pos_position)),
+      negative: format_td_element(Enum.at(data, neg_position))
+    }
+  end
+
+  defp format_td_element(value) do
+    value
+    |> clean_text_in_element()
+    |> String.split()
+  end
+
+  defp process_metadata_header(html_element) do
     format = fn text_value ->
       String.split(text_value) |> Enum.join(" ")
     end
@@ -216,7 +275,7 @@ defmodule Services.JapaneseVerbConjugator.Client do
   defp clean_text_in_element(element) do
     element
     |> Floki.text()
-    |> String.replace(["?", "\r", "\n", "   "], "")
+    |> String.replace(["?", "\r", "\n", "     "], "")
     |> String.trim()
     |> String.split(" ", trim: true)
     |> Enum.join(" ")

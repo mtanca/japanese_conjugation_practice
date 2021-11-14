@@ -8,6 +8,7 @@ defmodule JapaneseVerbConjugation.VerbTenses.VerbTense do
 
   @derive {Jason.Encoder,
            only: [
+             :id,
              :base_verb_id,
              :form,
              :meaning,
