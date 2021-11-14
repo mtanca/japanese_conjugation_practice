@@ -9,12 +9,20 @@ class Search {
   search(params) {
     const req = {
       headers: this.JSON_HEADERS,
-      credentials: "include",
       method: "POST",
       body: JSON.stringify(params)
     };
 
     return APIHelper.callAPI(`/search`, req);
+  }
+
+  fetchAll() {
+    const req = {
+      headers: this.JSON_HEADERS,
+      method: "GET"
+    };
+
+    return APIHelper.callAPI(`/search/all`, req);
   }
 }
 
