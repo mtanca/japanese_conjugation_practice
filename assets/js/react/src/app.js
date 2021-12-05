@@ -4,7 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import styled from "styled-components";
 
 import HomePage from "./components/pages/Home";
-import TenseStudySessionPage from "./components/pages/TenseStudySession";
+import StudySessionPage from "./components/pages/StudySession/index";
 import TenseCardReview from "./components/pages/TenseCardReview";
 
 const Container = styled.div`
@@ -17,11 +17,7 @@ const renderBrowserViewRouter = () => {
   return (
     <Routes>
       <Route expact path="/" element={<HomePage />} />
-      <Route
-        expact
-        path="/study-sessions/tenses"
-        element={<TenseStudySessionPage />}
-      />
+      <Route expact path="/study-sessions" element={<StudySessionPage />} />
       <Route path="/study-sessions/:sessionId" element={<TenseCardReview />} />
     </Routes>
   );

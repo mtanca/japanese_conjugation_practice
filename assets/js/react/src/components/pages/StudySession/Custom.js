@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
-import { SearchService } from "../../services/SearchService";
-import { StudySessionService } from "../../services/StudySession";
+import { SearchService } from "../../../services/SearchService";
+import { StudySessionService } from "../../../services/StudySession";
 
 const PageContainer = styled.div`
   display: flex;
@@ -20,10 +20,6 @@ const ConfigOption = styled.div`
   border: 1pt solid;
   border-radius: 10pt;
   padding: 10pt;
-`;
-
-const StudySessionCardContainer = styled.div`
-  display: flex;
 `;
 
 const VerbSelectionContainer = styled.div`
@@ -56,55 +52,11 @@ const CardDataField = styled.div`
   flex: 1;
 `;
 
-const StudySessionContainer = styled.div`
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  margin: 50pt;
-  cursor: pointer;
-  justify-content: center;
-  min-height: 200pt;
-  max-width: 500pt;
-  border: 1pt solid;
-  border-radius: 10pt;
-`;
-
-const StudySessionTitle = styled.span`
-  display: flex;
-  flex: 1;
-  font-weight: bold;
-  justify-content: center;
-  padding: 10pt;
-`;
-
 const PageTitle = styled.h1`
   display: flex;
   font-weight: bold;
   justify-content: center;
   padding: 10pt;
-`;
-
-const StudySessionBody = styled.div`
-  display: flex;
-  flex: 1;
-  font-weight: bold;
-  justify-content: center;
-  padding: 10pt;
-`;
-
-const SubmitButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 50pt;
-  max-width: 200pt;
-  max-height: 50pt;
-  min-height: 30pt;
-  background-color: blue;
-  padding: 10pt;
-  border: 1pt solid;
-  border-radius: 10pt;
-  align-self: center;
 `;
 
 const VerbSelection = styled.tr`
@@ -113,21 +65,17 @@ const VerbSelection = styled.tr`
   border: 1pt solid;
 `;
 
-const TenseStudySessionPage = props => {
-  const getUrlParams = () => {
-    return window.location.href
-      .split("?")[1]
-      .split("&")
-      .map(v => {
-        const [key, value] = v.split("=");
-        return { [key]: value };
-      });
-  };
+const CustomStudySession = props => {
+  const urlParams = window.location.href
+    .split("sessions?")[1]
+    .split("&")
+    .reduce((prev, next) => {
+      const [k, v] = next.split("=");
+      return { ...prev, [k]: v };
+    }, {});
 
-  const [urlParams, setUrlParams] = useState(getUrlParams());
   const [verbsList, setVerbsList] = useState(undefined);
   const [selectedVerbs, setSelectedVerbsList] = useState({});
-
   const [configPolitness, setConfigPolitness] = useState("politnessAll");
   const [configSentenceType, setConfigSentenceType] = useState("positiveAll");
 
@@ -149,7 +97,9 @@ const TenseStudySessionPage = props => {
   };
 
   const handleStart = () => {
+    delete urlParams.type;
     const data = {
+      type: "custom",
       tenses: urlParams,
       verbs: selectedVerbs,
       filters: { politness: configPolitness, sentenceType: configSentenceType }
@@ -280,7 +230,6 @@ const TenseStudySessionPage = props => {
   return (
     <PageContainer>
       <PageTitle>Tense Study Session</PageTitle>
-
       <PageTitle>Configure Session: </PageTitle>
       <ConfigOptionsContainer>
         {renderPolitnessOptions()}
@@ -294,4 +243,4 @@ const TenseStudySessionPage = props => {
   );
 };
 
-export default TenseStudySessionPage;
+export default CustomStudySession;

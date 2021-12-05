@@ -8,13 +8,19 @@ defmodule JapaneseVerbConjugation.VerbsTest do
 
     @valid_attrs %{
       class: "some class",
-      plain_base: "some plain_base"
+      plain_base: "some plain_base",
+      romaji: "some romaji",
+      meaning: "some meaning"
     }
+
     @update_attrs %{
       class: "some updated class",
-      plain_base: "some updated plain_base"
+      plain_base: "some updated plain_base",
+      romaji: "some updated romaji",
+      meaning: "some updated meaning"
     }
-    @invalid_attrs %{class: nil, plain_base: nil}
+
+    @invalid_attrs %{class: nil, plain_base: nil, meaning: nil, romaji: nil}
 
     def verb_fixture(attrs \\ %{}) do
       {:ok, verb} =

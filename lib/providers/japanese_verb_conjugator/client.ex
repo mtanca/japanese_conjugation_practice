@@ -238,7 +238,7 @@ defmodule Services.JapaneseVerbConjugator.Client do
     }
   end
 
-  defp format_td_element(value) do
+  def format_td_element(value) do
     value
     |> clean_text_in_element()
     |> String.split()
@@ -275,8 +275,8 @@ defmodule Services.JapaneseVerbConjugator.Client do
   defp clean_text_in_element(element) do
     element
     |> Floki.text()
-    |> String.replace(["?", "\r", "\n", "     "], "")
     |> String.trim()
+    |> String.replace(["?", "\r", "\n"], "")
     |> String.split(" ", trim: true)
     |> Enum.join(" ")
   end

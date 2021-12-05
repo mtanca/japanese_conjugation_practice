@@ -24,20 +24,21 @@ Enum.each(verbs, fn verb ->
             [first_romaji, second_romaji, first_kanji, second_kanji] ->
               {first_romaji <> " " <> second_romaji, first_kanji <> " " <> second_kanji}
 
+            [first_romaji, second_romaji, third_romaji, first_kanji, second_kanji] ->
+              {Enum.join([first_romaji, second_romaji, third_romaji], " "),
+               first_kanji <> " " <> second_kanji}
+
             [{romaji, hirigana}] ->
               {romaji, hirigana}
 
             [{_, _}, {romaji, hirigana}] ->
               {romaji, hirigana}
 
-            nil ->
+            [_] ->
               {nil, nil}
 
-            [] ->
+            _other ->
               {nil, nil}
-
-            _ ->
-              IO.inspect({nil, nil}, label: to_string(value))
           end
 
         {form, politness} =
@@ -63,4 +64,88 @@ Enum.each(verbs, fn verb ->
       end)
     end)
   end
+end)
+
+[
+  %{
+    name: "Japanese Verbs",
+    tenses: ["Present Indicative"],
+    form: ["Negative", "Positive"],
+    politness: ["Plain", "Polite"],
+    data: [
+      "おくる",
+      "すわる",
+      "おく",
+      "やくす",
+      "とまる",
+      "かえる",
+      "ならう",
+      "つづける",
+      "うまれる",
+      "ねがう",
+      "かぶる",
+      "はく",
+      "なおす",
+      "いる",
+      "おりる",
+      "かつ",
+      "やく",
+      "いきる",
+      "はこぶ",
+      "あらう",
+      "はたらく",
+      "できる",
+      "ぬぐ",
+      "あう",
+      "こたえる",
+      "しまる",
+      "のむ",
+      "やすぶ",
+      "まがる",
+      "つかう",
+      "まける",
+      "しんじる",
+      "もらう",
+      "よむ",
+      "はいる",
+      "かく",
+      "およぐ",
+      "たずねる",
+      "おぼえる",
+      "もつ",
+      "あそぶ",
+      "のる",
+      "みつける",
+      "あける",
+      "つくる"
+    ]
+  }
+]
+|> Enum.each(fn deck ->
+  {:ok, new_deck} = JapaneseVerbConjugation.Decks.create_deck(%{name: deck.name})
+
+  Enum.each(deck.data, fn verb_plain_base ->
+    # hirigana in data list may differ from whats in db- look up plain base in api
+    with {:ok, api_data} <- Services.JapaneseVerbConjugator.Client.get(verb_plain_base),
+         [_, plain_base] <-
+           Enum.find(api_data.data, fn %{data: d} -> d.tense in ["Present Indicative"] end)
+           |> get_in([:data, :plain_positive]),
+         verb when not is_nil(verb) <- JapaneseVerbConjugation.Verbs.get_by_base(plain_base),
+         tenses when tenses != [] <-
+           JapaneseVerbConjugation.VerbTenses.get_tenses_for_verb(verb.id) do
+      Enum.filter(tenses, fn tense ->
+        tense.form in deck.form and tense.politness in deck.politness and
+          tense.tense in deck.tenses
+      end)
+      |> Enum.each(fn card ->
+        {:ok, _} =
+          JapaneseVerbConjugation.CardDecks.create_card_deck(%{
+            deck_id: new_deck.id,
+            card_id: card.id
+          })
+      end)
+    else
+      reason -> IO.inspect(inspect(reason), label: "FAILED......")
+    end
+  end)
 end)

@@ -87,8 +87,6 @@ const TenseCardReview = () => {
           <ReviewCardDetail>{question}</ReviewCardDetail>
         </ReviewCardTitle>
         <ReviewCardDetails>
-          <ReviewCardDetail>Sentence Type: {reviewCard.form}</ReviewCardDetail>
-          <br />
           <ReviewCardDetail>Tense: {reviewCard.tense}</ReviewCardDetail>
           <br />
           <ReviewCardDetail>

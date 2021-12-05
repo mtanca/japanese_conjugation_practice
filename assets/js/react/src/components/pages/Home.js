@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
 import { SearchService } from "../../services/SearchService";
+import { DeckService } from "../../services/Decks";
+
+import TenseSelection from "../common/TenseSelection";
 
 const PageContainer = styled.div`
   display: flex;
@@ -89,14 +92,28 @@ const SubmitButton = styled.button`
 const HomePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState(undefined);
+  const [selectedTenses, setSelectedTenses] = useState({});
 
   const [allTenses, setAllTenses] = useState(false);
   const [pastSimple, setPastSimple] = useState(false);
   const [presentSimple, setPresentSimple] = useState(false);
   const [pastContinuous, setPastContinuous] = useState(false);
   const [presentContinuous, setPresentContinuous] = useState(false);
+  const [decks, setDecks] = useState(undefined);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    function fetchDecks() {
+      DeckService.fetchAll().then(res => {
+        console.log(res);
+        if (res.data) {
+          setDecks(res.data);
+        }
+      });
+    }
+    fetchDecks();
+  }, []);
 
   const handleSearch = () => {
     SearchService.search({ hirigana_verb: searchTerm }).then(res => {
@@ -106,23 +123,19 @@ const HomePage = () => {
     });
   };
 
-  const handleTenseStudySession = event => {
+  const handleSession = () => {
     event.preventDefault();
-
-    const filters = {
-      allTenses: allTenses,
-      pastSimple: pastSimple,
-      presentSimple: presentSimple,
-      pastContinuous: pastContinuous,
-      presentContinuous: presentContinuous
-    };
-
-    const selectedFilters = Object.keys(filters)
-      .filter(tenseFilter => filters[tenseFilter] === true)
+    console.log(selectedTenses);
+    const selectedFilters = Object.keys(selectedTenses)
+      .filter(tenseFilter => selectedTenses[tenseFilter] === true)
       .map(tenseFilter => `${tenseFilter}=true`)
       .join("&");
 
-    navigate(`/study-sessions/tenses?${selectedFilters}`);
+    navigate(`/study-sessions?type=custom&${selectedFilters}`);
+  };
+
+  const handleDeckStudySession = deckId => {
+    navigate(`/study-sessions?type=deck&deck_id=${deckId}`);
   };
 
   const renderInputField = () => {
@@ -163,72 +176,29 @@ const HomePage = () => {
     ));
   };
 
-  const renderTensePracticeCard = () => {
-    return (
-      <StudySessionContainer>
-        <StudySessionTitle>TENSES PRACTICE</StudySessionTitle>
-        <StudySessionBody>
-          <input
-            type="radio"
-            id="present_simple"
-            name="present_simple"
-            checked={presentSimple}
-            onClick={e => setPresentSimple(!presentSimple)}
-          />
-          <label for="present_simple">Present Simple</label>
+  const composeConfigMap = (label, id, isChecked, onClick) => {
+    return {
+      label: label,
+      id: id,
+      isChecked: isChecked,
+      onClick: e => onClick(!isChecked)
+    };
+  };
 
-          <input
-            type="radio"
-            id="present_continuous"
-            name="present_continuous"
-            value="present_continuous"
-            checked={presentContinuous}
-            onClick={e => setPresentContinuous(!presentContinuous)}
-          />
-          <label for="present_continuous">Present Continuous</label>
+  const renderDecks = () => {
+    if (!decks) {
+      return <p>no decks</p>;
+    }
 
-          <input
-            type="radio"
-            id="past_simple"
-            name="past_simple"
-            value="past_simple"
-            checked={pastSimple}
-            onClick={e => setPastSimple(!pastSimple)}
-          />
-          <label for="past_simple">Past Simple</label>
-
-          <input
-            type="radio"
-            id="past_continuous"
-            name="past_continuous"
-            value="past_continuous"
-            checked={pastContinuous}
-            onClick={e => setPastContinuous(!pastContinuous)}
-          />
-          <label for="past_continuous">Past Continuous</label>
-
-          <input
-            type="radio"
-            id="all"
-            name="all_tenses"
-            value="all_tenses"
-            checked={allTenses}
-            onClick={e => {
-              setAllTenses(!allTenses);
-              setPresentSimple(false);
-              setPresentContinuous(false);
-              setPastSimple(false);
-              setPastContinuous(false);
-            }}
-          />
-          <label for="All Tenses">All Tenses</label>
-          <br />
-        </StudySessionBody>
-        <SubmitButton onClick={handleTenseStudySession}>
-          START SESSION
-        </SubmitButton>
-      </StudySessionContainer>
-    );
+    return decks.map(data => (
+      <div>
+        <span onClick={() => handleDeckStudySession(data.deck.id)}>
+          {data.deck.name}
+        </span>
+        <span>Cards: {data.card_count}</span>
+        <span>Last Used: {data.last_used ? data.last_used : "Not Used"}</span>
+      </div>
+    ));
   };
 
   return (
@@ -236,11 +206,16 @@ const HomePage = () => {
       <PageTitle>Choose Study Session Type</PageTitle>
       <StudySessionCardContainer>
         <StudySessionContainer>
-          <StudySessionTitle>VOCAB REVIEW</StudySessionTitle>
+          <StudySessionTitle>YOUR DECKS</StudySessionTitle>
+          {renderDecks()}
         </StudySessionContainer>
-        {renderTensePracticeCard()}
-      </StudySessionCardContainer>
 
+        <StudySessionContainer>
+          <StudySessionTitle>YOUR DECKS</StudySessionTitle>
+          <TenseSelection onChange={filters => setSelectedTenses(filters)} />
+          <SubmitButton onClick={handleSession}>START SESSION</SubmitButton>
+        </StudySessionContainer>
+      </StudySessionCardContainer>
       {searchResults && renderSearchResults()}
     </PageContainer>
   );

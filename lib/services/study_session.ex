@@ -6,7 +6,7 @@ defmodule Services.StudySession do
   use GenServer
   use TypedStruct
 
-  alias JapaneseVerbConjugation.Verbs
+  alias JapaneseVerbConjugation.{Verbs, VerbTenses}
 
   require Logger
 
@@ -23,15 +23,16 @@ defmodule Services.StudySession do
     field :tenses, String.t()
     field :verbs, list(Verbs.t())
     field :card_scores, map() | verb_data()
+    field :card_count, non_neg_integer()
   end
 
   @spec start_link(
           session_id :: String.t(),
           selected_tenses :: list(String.t()),
-          selected_verbs :: list(Verbs.Verb.t())
+          selected_verbs :: list(VerbTenses.VerbTense.t())
         ) :: {:ok, pid()} | {:error, term()}
   def start_link(session_id, selected_tenses, selected_verbs) do
-    params = [session_id, selected_tenses, selected_verbs]
+    params = [session_id, selected_tenses, selected_verbs] |> IO.inspect(label: "======")
     GenServer.start_link(__MODULE__, params, name: :"#{session_id}")
   end
 
@@ -62,7 +63,8 @@ defmodule Services.StudySession do
        session_id: session_id,
        tenses: selected_tenses,
        verbs: selected_verbs,
-       card_scores: %{}
+       card_scores: %{},
+       card_count: Enum.count(selected_verbs)
      }}
   end
 
