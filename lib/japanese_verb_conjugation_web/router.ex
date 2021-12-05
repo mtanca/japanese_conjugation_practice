@@ -13,6 +13,12 @@ defmodule JapaneseVerbConjugationWeb.Router do
     plug :accepts, ["json"]
   end
 
+  scope "/decks", JapaneseVerbConjugationWeb do
+    pipe_through :api
+
+    get "/", DeckController, :index
+  end
+
   scope "/search", JapaneseVerbConjugationWeb do
     pipe_through :api
 
