@@ -42,7 +42,7 @@ defmodule JapaneseVerbConjugation.MixProject do
     [
       {:phoenix, "~> 1.5.6"},
       {:phoenix_ecto, "~> 4.1"},
-      {:ecto_sql, "~> 3.7.1"},
+      {:ecto_sql, "~> 3.4.0"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 2.11"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
@@ -57,7 +57,8 @@ defmodule JapaneseVerbConjugation.MixProject do
       {:httpoison, "~> 1.8"},
       {:floki, "~> 0.32.0"},
       {:typed_struct, "~> 0.2.1"},
-      {:excoveralls, "~> 0.10", only: :test}
+      {:excoveralls, "~> 0.10", only: :test},
+      {:priority_queue, "~> 1.0"}
     ]
   end
 

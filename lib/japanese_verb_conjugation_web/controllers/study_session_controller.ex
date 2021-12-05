@@ -92,8 +92,8 @@ defmodule JapaneseVerbConjugationWeb.StudySessionControllerController do
     params = %{card_id: card_id, ease: ease}
 
     :ok = Services.StudySession.update(session_id, params)
-    {:ok, {next_card, session_details}} = Services.StudySession.next_card(session_id)
-    json(conn, %{"card" => next_card, "sessionDetails" => session_details})
+    {:ok, session_details} = Services.StudySession.session_details(session_id)
+    json(conn, %{"sessionDetails" => session_details})
   end
 
   # HELPER FUNCTIONS.....
