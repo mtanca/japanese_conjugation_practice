@@ -152,7 +152,7 @@ defmodule JapaneseVerbConjugationWeb.StudySessionControllerController do
             &(&1.form == f and &1.politness == p and &1.tense in tenses)
         end
 
-      Enum.filter(all_verb_tenses, &(&1.tense in tenses))
+      Enum.filter(all_verb_tenses, &filter_func.(&1))
     end
   end
 end
