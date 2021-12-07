@@ -101,6 +101,18 @@ const TenseCardReview = () => {
     return <span> No cards to review in this session</span>;
   };
 
+  const formatTense = tense => {
+    if (tense.includes("Indicative")) {
+      return tense.replace("Indicative", "Simple");
+    }
+
+    if (tense.includes("Progressive")) {
+      return tense.replace("Progressive", "Continuous");
+    }
+
+    return tense;
+  };
+
   const renderReviewCardQuestion = () => {
     const question = reviewCard.meaning
       ? reviewCard.meaning
@@ -112,7 +124,7 @@ const TenseCardReview = () => {
         </ReviewCardTitle>
         <ReviewCardDetails>
           <ReviewCardDetail tense={reviewCard.tense}>
-            {reviewCard.tense} <br />
+            {formatTense(reviewCard.tense)} <br />
           </ReviewCardDetail>
 
           <ReviewCardDetail politness={reviewCard.politness}>
