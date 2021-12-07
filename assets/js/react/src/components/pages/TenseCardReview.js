@@ -46,7 +46,11 @@ const ReviewCardDetail = styled.span`
     props.politness === "Polite"
       ? "green"
       : props.politness === "Plain"
-      ? "Blue"
+      ? "blue"
+      : props.tense === "Past Progressive"
+      ? "orange"
+      : props.tense === "Past Indicative"
+      ? "purple"
       : "black"};
   font-weight: ${props => (props.politness ? "bold" : "none")};
   font-size: 18pt;
@@ -107,6 +111,10 @@ const TenseCardReview = () => {
           <ReviewCardDetail>{question}</ReviewCardDetail>
         </ReviewCardTitle>
         <ReviewCardDetails>
+          <ReviewCardDetail tense={reviewCard.tense}>
+            {reviewCard.tense} <br />
+          </ReviewCardDetail>
+
           <ReviewCardDetail politness={reviewCard.politness}>
             {reviewCard.politness}
           </ReviewCardDetail>

@@ -83,16 +83,19 @@ defmodule Services.StudySession do
 
   @impl GenServer
   def handle_info({:schedule_card, {card_id, ease}}, state) do
-    naive_datetime_to_unix = fn naive_datetime ->
-      DateTime.from_naive!(naive_datetime, "Etc/UTC") |> DateTime.to_unix()
+    new_unix_time = fn seconds ->
+      NaiveDateTime.utc_now()
+      |> NaiveDateTime.add(seconds, :second)
+      |> DateTime.from_naive!("Etc/UTC")
+      |> DateTime.to_unix()
     end
 
     schedule_time =
-    case ease do
-      "hard" -> naive_datetime_to_unix.(NaiveDateTime.add(NaiveDateTime.utc_now, Enum.random(20..60), :second))
-      "medium" -> naive_datetime_to_unix.(NaiveDateTime.add(NaiveDateTime.utc_now, Enum.random(60..300), :second))
-      "DSA" -> naive_datetime_to_unix.(NaiveDateTime.add(NaiveDateTime.utc_now, 1_000_000, :second))
-    end
+      case ease do
+        "hard" -> new_unix_time.(Enum.random(20..60))
+        "medium" -> new_unix_time.(Enum.random(45..200))
+        "DSA" -> new_unix_time.(1_000_000)
+      end
 
     new_queue = PriorityQueue.put(state.priority_queue, schedule_time, card_id)
 
@@ -107,24 +110,31 @@ defmodule Services.StudySession do
 
   @impl GenServer
   def handle_call(:next_card, _from, state) do
-     current_time = DateTime.utc_now() |> DateTime.to_unix()
+    current_time = DateTime.utc_now() |> DateTime.to_unix()
+
     {next_card, queue} =
-    with {send_at, card_id} when not is_nil(send_at) <- PriorityQueue.min(state.priority_queue),
-    should_send? when should_send? == true <- current_time > send_at do
-      card = Enum.find(state.verbs, fn(verb) ->
-          verb.id == card_id
-      end)
-      {{_, _}, queue} = PriorityQueue.pop(state.priority_queue)
-      {card, queue}
-    else
-      _ ->
-      {Enum.random(state.verbs), state.priority_queue}
-    end
+      with {send_at, card_id} when not is_nil(send_at) <- PriorityQueue.min(state.priority_queue),
+           should_send? when should_send? == true <- current_time > send_at do
+        card =
+          Enum.find(state.verbs, fn verb ->
+            verb.id == card_id
+          end)
 
-    details = %{session_id: state.session_id, card_scores: state.card_scores, review_count: state.review_count + 1}
-  {:reply, {:ok, {next_card, details}}, %{state | priority_queue: queue}}
+        {{_, _}, queue} = PriorityQueue.pop(state.priority_queue)
+        {card, queue}
+      else
+        _ ->
+          {Enum.random(state.verbs), state.priority_queue}
+      end
+
+    details = %{
+      session_id: state.session_id,
+      card_scores: state.card_scores,
+      review_count: state.review_count + 1
+    }
+
+    {:reply, {:ok, {next_card, details}}, %{state | priority_queue: queue}}
   end
-
 
   @impl GenServer
   def handle_call({:update, %{card_id: card_id, ease: ease}}, _from, state) do
@@ -156,6 +166,7 @@ defmodule Services.StudySession do
 
     updated_card_scores = Map.put(state.card_scores, card_id, updated_card_ease_count)
 
-    {:reply, :ok, %{state | card_scores: updated_card_scores, review_count: state.review_count + 1}}
+    {:reply, :ok,
+     %{state | card_scores: updated_card_scores, review_count: state.review_count + 1}}
   end
 end

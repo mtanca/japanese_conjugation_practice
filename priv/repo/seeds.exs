@@ -69,7 +69,6 @@ end)
 [
   %{
     name: "Japanese Verbs",
-    tenses: ["Present Indicative"],
     form: ["Negative", "Positive"],
     politness: ["Plain", "Polite"],
     data: [
@@ -134,8 +133,7 @@ end)
          tenses when tenses != [] <-
            JapaneseVerbConjugation.VerbTenses.get_tenses_for_verb(verb.id) do
       Enum.filter(tenses, fn tense ->
-        tense.form in deck.form and tense.politness in deck.politness and
-          tense.tense in deck.tenses
+        tense.form in deck.form and tense.politness in deck.politness
       end)
       |> Enum.each(fn card ->
         {:ok, _} =
