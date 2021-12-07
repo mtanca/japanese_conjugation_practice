@@ -1,8 +1,6 @@
 defmodule JapaneseVerbConjugationWeb.StudySessionControllerController do
   use JapaneseVerbConjugationWeb, :controller
 
-  require IEx
-
   alias JapaneseVerbConjugation.{Verbs, VerbTenses}
 
   def get(conn, %{"session_id" => session_id}) do
@@ -92,21 +90,24 @@ defmodule JapaneseVerbConjugationWeb.StudySessionControllerController do
     params = %{card_id: card_id, ease: ease}
 
     :ok = Services.StudySession.update(session_id, params)
-    {:ok, {next_card, session_details}} = Services.StudySession.next_card(session_id)
-    json(conn, %{"card" => next_card, "sessionDetails" => session_details})
+    {:ok, session_details} = Services.StudySession.session_details(session_id)
+    json(conn, %{"sessionDetails" => session_details})
   end
 
   # HELPER FUNCTIONS.....
 
   defp get_tenses_from_params(selected_tenses) do
-    Enum.reduce(selected_tenses, [], fn {key, _}, acc ->
+    selected_tenses
+    |> Enum.filter(fn {_, v} -> v == true or v == "true" end)
+    |> Enum.reduce([], fn {key, _}, acc ->
       new_tense =
         case key do
           "allTenses" -> "All"
           "presentSimple" -> "Present Indicative"
-          "pastSimple" -> "Past Indicative Past Presumptive"
+          "pastSimple" -> "Past Indicative"
           "presentContinuous" -> "Present Progressive"
           "pastContinuous" -> "Past Progressive"
+          "volitional" -> "Presumptive \\ Volitional"
           _ -> []
         end
 
@@ -152,7 +153,7 @@ defmodule JapaneseVerbConjugationWeb.StudySessionControllerController do
             &(&1.form == f and &1.politness == p and &1.tense in tenses)
         end
 
-      Enum.filter(all_verb_tenses, &(&1.tense in tenses))
+      Enum.filter(all_verb_tenses, &filter_func.(&1))
     end
   end
 end

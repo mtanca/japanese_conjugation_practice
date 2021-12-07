@@ -25,11 +25,12 @@ const OptionsContainer = styled.div`
 `;
 
 const TenseSelection = ({ onChange }) => {
-  const [allTenses, setAllTenses] = useState(false);
+  const [allTenses, setAllTenses] = useState(true);
   const [pastSimple, setPastSimple] = useState(false);
   const [presentSimple, setPresentSimple] = useState(false);
   const [pastContinuous, setPastContinuous] = useState(false);
   const [presentContinuous, setPresentContinuous] = useState(false);
+  const [volitional, setVolitional] = useState(false);
 
   useEffect(() => {
     onChange({
@@ -37,9 +38,17 @@ const TenseSelection = ({ onChange }) => {
       pastSimple: pastSimple,
       presentSimple: presentSimple,
       pastContinuous: pastContinuous,
-      presentContinuous: presentContinuous
+      presentContinuous: presentContinuous,
+      volitional: volitional
     });
-  }, [allTenses, pastSimple, presentSimple, pastContinuous, presentContinuous]);
+  }, [
+    allTenses,
+    pastSimple,
+    presentSimple,
+    pastContinuous,
+    presentContinuous,
+    volitional
+  ]);
 
   const handleTenseStudySession = event => {
     event.preventDefault();
@@ -49,7 +58,8 @@ const TenseSelection = ({ onChange }) => {
       pastSimple: pastSimple,
       presentSimple: presentSimple,
       pastContinuous: pastContinuous,
-      presentContinuous: presentContinuous
+      presentContinuous: presentContinuous,
+      volitional: volitional
     };
 
     onSumbit(filters);
@@ -91,6 +101,12 @@ const TenseSelection = ({ onChange }) => {
         "past_continuous",
         pastContinuous,
         setPastContinuous
+      ),
+      volitional: composeConfigMap(
+        "Volitional",
+        "volitional",
+        volitional,
+        setVolitional
       )
     };
 
