@@ -67,6 +67,8 @@ const TenseCardReview = () => {
   const [shouldShowAnswer, setShouldShowAnswer] = useState(false);
   const [nextCardRequest, setNextCardRequested] = useState(false);
   const [sessionDetails, setSessionDetails] = useState(undefined);
+  const [shouldEdit, setShouldEdit] = useState(false);
+  const [edit, setEdit] = useState("");
 
   const sessionId = window.location.href.split("sessions/")[1];
 
@@ -113,15 +115,54 @@ const TenseCardReview = () => {
     return tense;
   };
 
+  const handleUpdate = () => {
+    StudySessionService.updateCardDetails(reviewCard.id, {
+      meaning: edit
+    }).then(res => {
+      console.log(res);
+      if (res.card) {
+      }
+    });
+  };
+
+  const showOrEditMeaning = () => {
+    const question = reviewCard.meaning
+      ? reviewCard.meaning
+      : reviewCard.romaji;
+
+    if (shouldEdit) {
+      if (edit === "") {
+        setEdit(question);
+      }
+
+      return (
+        <>
+          <input
+            onChange={e => setEdit(e.target.value)}
+            value={edit}
+            type="text"
+          />
+          <button onClick={handleUpdate}>Update</button>
+          <button onClick={() => setShouldEdit(false)}>Cancel</button>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <ReviewCardDetail>{question}</ReviewCardDetail>{" "}
+        <button onClick={() => setShouldEdit(true)}>Edit</button>
+      </>
+    );
+  };
+
   const renderReviewCardQuestion = () => {
     const question = reviewCard.meaning
       ? reviewCard.meaning
       : reviewCard.romaji;
     return (
       <>
-        <ReviewCardTitle>
-          <ReviewCardDetail>{question}</ReviewCardDetail>
-        </ReviewCardTitle>
+        <ReviewCardTitle>{showOrEditMeaning()}</ReviewCardTitle>
         <ReviewCardDetails>
           <ReviewCardDetail tense={reviewCard.tense}>
             {formatTense(reviewCard.tense)} <br />

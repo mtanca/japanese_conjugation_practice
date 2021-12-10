@@ -154,6 +154,7 @@ defmodule JapaneseVerbConjugationWeb.StudySessionControllerController do
         end
 
       Enum.filter(all_verb_tenses, &filter_func.(&1))
+      |> Enum.filter(fn vt -> vt.hirigana end)
     end
   end
 end

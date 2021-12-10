@@ -36,6 +36,16 @@ class StudySession {
 
     return APIHelper.callAPI(`/study-sessions/${sessionId}`, req);
   }
+
+  updateCardDetails(cardId, details) {
+    const req = {
+      headers: this.JSON_HEADERS,
+      method: "PUT",
+      body: JSON.stringify(details)
+    };
+
+    return APIHelper.callAPI(`/cards/${cardId}`, req);
+  }
 }
 
 export const StudySessionService = new StudySession();
